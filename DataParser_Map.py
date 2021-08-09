@@ -16,6 +16,7 @@ def search(userchoice, user_search_key, user_search_value):
     #print("userchoice is ", userchoice, user_search_key, user_search_value)
     if(userchoice not in megamap):
         return {}
+    
     tmp_mega_map = megamap[userchoice]
     #print(tmp_mega_map)
        
@@ -23,7 +24,6 @@ def search(userchoice, user_search_key, user_search_value):
         tmp_map = tmp_mega_map[user_search_key] #Hash into the required map
         if user_search_value in tmp_map.keys():
             result = tmp_map[user_search_value]
-            #print(json.dumps(result, indent=4, sort_keys=True))
             return result
         else:
             #print("Error: Search Item does not exist")
@@ -63,9 +63,19 @@ def createHashMap():
         tmp_mega_map = megamap[filename_inputindex_map[fileName]]
         tmp_fields_map = fieldsmegamap[filename_inputindex_map[fileName]]
         
-        for user in userData: #For each user
+        for user in userData: #For each JSON item
             #print(user)
             for key in user.keys(): #For each key in every user
+                keyindex = user[key]
+                if not str(user[key]): #Empty value insert to hashmap with key as "_"
+                    #print("description", key, user[key])
+                    #user[key] = "_"
+                    keyindex = "_"
+                #prepare of list of bool keys, to check for case sensitivity during bool search
+                if(str(user[key]) == "True" or str(user[key]) == "False"):
+                    #print("Insert into key_bool_list ", key)
+                    key_bool_list.add(key)
+                
                 if(key not in tmp_fields_map):
                     tmp_fields_map.append(key)
                     
@@ -73,8 +83,6 @@ def createHashMap():
                     user_key_map = tmp_mega_map[str(key)]
                 else:
                     user_key_map = {}
-                    
-                #print(user[key])
                 if(isinstance(user[key], list)): #if any key has a list as value
                     #print("list key", user[key], key)
                     for item in user[key]: #Eg for item in user["tags"] is a list
@@ -83,10 +91,10 @@ def createHashMap():
                         else:
                             user_key_map[str(item)] = [user]
                 else:
-                    if str(user[key]) in user_key_map:
-                        user_key_map[str(user[key])].append(user)
+                    if str(keyindex) in user_key_map:
+                        user_key_map[str(keyindex)].append(user)
                     else:
-                        user_key_map[str(user[key])] = [user]
+                        user_key_map[str(keyindex)] = [user]
                             
                 tmp_mega_map[str(key)] = user_key_map
             #print(tmp_mega_map)
@@ -97,11 +105,20 @@ def createHashMap():
 # Eg for searching on users, perform relative searches on Tickets and Organisations to get Organisation name and
 # Ticket details for a particular user.
 def advanceSearch(userchoice, user_search_key, user_search_value):
+    #Check for bool to convert from "true" to "True" or "false" to "False"
+    #print("key_bool_list", key_bool_list)
+    if user_search_key in key_bool_list:
+        if(user_search_value == "true"):
+            user_search_value = "True"
+        if(user_search_value == "false"):
+            user_search_value = "False"
+    if not str(user_search_value): #if searching for empty value, key is inserted as "_"
+        user_search_value = "_"
     results = search(userchoice, user_search_key, user_search_value) #basic search function
     tmp_result_1 = {}
     tmp_result_2 = {}
     if(results != {}):
-        #print("Search Successful")
+        #Advance search into other JSON files to get additional details
         for result in results: #if successful, then parse other JSON files
             if(userchoice == user): #for user, get ticket and organisation details
                 result["Ticket"] = []
@@ -242,6 +259,8 @@ organisations_mega_map = {}
 userfields_mega_map = []
 ticketfields_mega_map = []
 organisationfields_mega_map = []
+
+key_bool_list = set()
 
 choice = ''
 ### MAIN PROGRAM ###
